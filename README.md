@@ -43,7 +43,7 @@ CUDA_VISIBLE_DEVICES=0,1 torchrun --standalone --nnodes=1 --nproc_per_node=2 bas
 
 ## Acknowledgments
 
-We are very grateful for these excellent works: [BasicSR](https://github.com/XPixelGroup/BasicSR),[CATANet](https://github.com/EquationWalker/CATANet). Please follow their respective licenses for usage and redistribution. Thanks for their awesome works.
+We are very grateful for these excellent works: [BasicSR](https://github.com/XPixelGroup/BasicSR), [CATANet](https://github.com/EquationWalker/CATANet). Please follow their respective licenses for usage and redistribution. Thanks for their awesome works.
 
 ## Contact
 
