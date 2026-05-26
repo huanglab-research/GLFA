@@ -13,9 +13,7 @@ from basicsr.utils import (AvgTimer, MessageLogger, check_resume, get_env_info, 
                            init_tb_logger, init_wandb_logger, make_exp_dirs, mkdir_and_rename, scandir)
 from basicsr.utils.options import copy_opt_file, dict2str, parse_options
 
-import os
 
-# enable_deepspeed = os.getenv('ENABLE_DEEPSPEED', 'false').lower() in ['true', '1']
 
 def _get_base_train_key(opt):
     ds = opt['datasets']
@@ -27,7 +25,6 @@ def _get_base_train_key(opt):
     return train_keys[0]
 
 def init_tb_loggers(opt):
-    # initialize wandb logger before tensorboard logger to allow proper sync
     if (opt['logger'].get('wandb') is not None) and (opt['logger']['wandb'].get('project')
                                                      is not None) and ('debug' not in opt['name']):
         assert opt['logger'].get('use_tb_logger') is True, ('should turn on tensorboard when using wandb')
@@ -38,70 +35,30 @@ def init_tb_loggers(opt):
     return tb_logger
 
 def train_pipeline(root_path):
-    print(">>> train_pipeline() 开始执行")   ####
     # parse options, set distributed setting, set random seed
     opt, args = parse_options(root_path, is_train=True)
     opt['root_path'] = root_path
 
-    if not opt.get('auto_new_exp', True):
-        # 如果用户在yaml中关闭自动重命名，则不改动
-        pass
-    elif load_resume_state(opt) is None:
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        base_name = opt['name']
-        opt['name'] = f"{base_name}_{timestamp}"
-        opt['path']['experiments_root'] = osp.join(opt['root_path'], 'experiments', opt['name'])
-        opt['path']['log'] = osp.join(opt['path']['experiments_root'], 'logs')
-        opt['path']['tb_logger'] = osp.join(opt['root_path'], 'tb_logger', opt['name']
+    ### The source code is currently incomplete and will be fully released once the manuscript is accepted by the journal.
 
     torch.backends.cudnn.benchmark = True
-    # torch.backends.cudnn.deterministic = True
-
-    # load resume states if necessary
     resume_state = load_resume_state(opt)
-    # mkdir for experiments and logger
     if resume_state is None:
         make_exp_dirs(opt)
         if opt['logger'].get('use_tb_logger') and 'debug' not in opt['name'] and opt['rank'] == 0:
             mkdir_and_rename(osp.join(opt['root_path'], 'tb_logger', opt['name']))
 
-    # copy the yml file to the experiment root
     copy_opt_file(args.opt, opt['path']['experiments_root'])
-
-    # WARNING: should not use get_root_logger in the above codes, including the called functions
-    # Otherwise the logger will not be properly initialized
     log_file = osp.join(opt['path']['log'], f"train_{opt['name']}_{get_time_str()}.log")
     logger = get_root_logger(logger_name='basicsr', log_level=logging.INFO, log_file=log_file)
     logger.info(get_env_info())
     logger.info(dict2str(opt))
-    # initialize wandb and tb loggers
     tb_logger = init_tb_loggers(opt)
-
-    # create train and validation dataloaders
     result = create_train_val_dataloader(opt, logger)
     train_loader, train_sampler, val_loaders, total_epochs, total_iters = result
 
     # create model
     model = build_model(opt)
-    # if enable_deepspeed:
-    #     model.init_deepspeed(args)
-
-    # load model weights
-    if resume_state:
-        model.resume_training(resume_state)
-        logger.info(f"Resuming training from epoch: {resume_state['epoch']}, iter: {resume_state['iter']}.")
-        start_epoch = resume_state['epoch']
-        current_iter = resume_state['iter']
-    else:
-        start_epoch = 0
-        current_iter = 0
-
-    msg_logger = MessageLogger(opt, current_iter, tb_logger)
-
-    base_train_key = _get_base_train_key(opt)
-    train_ds_opt = opt['datasets'][base_train_key]
-
-    prefetch_mode = train_ds_opt.get('prefetch_mode')
     if prefetch_mode is None or prefetch_mode == 'cpu':
         prefetcher = CPUPrefetcher(train_loader)
     elif prefetch_mode == 'cuda':

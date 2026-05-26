@@ -4,9 +4,6 @@ from os import path as osp
 import os
 import argparse
 import yaml
-import netCDF4 as nc
-import numpy as np
-import re  # ✅ 新增：用于解析文件名
 
 from basicsr.data import build_dataloader, build_dataset
 from basicsr.models import build_model
@@ -63,6 +60,8 @@ def test_pipeline(root_path):
         test_loader = build_dataloader(
             test_set, dataset_opt, num_gpu=opt['num_gpu'], dist=opt['dist'], sampler=None, seed=opt['manual_seed'])
         test_loaders.append(test_loader)
+
+    ### The source code is currently incomplete and will be fully released once the manuscript is accepted by the journal.
 
     model = build_model(opt)
 
